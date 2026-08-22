@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hemepath Case Log</title>
+<style>
+  :root {
+    --ink: #12302f;
+    --teal: #0f4c4c;
+    --teal-light: #e3efec;
+    --line: #d5dedc;
+    --muted: #5b6b6b;
+    --bg: #f5f7f6;
+    --card: #ffffff;
+    --danger-bg: #fdeceb;
+    --danger-ink: #9a3b34;
+    --done-bg: #e3efec;
+    --done-ink: #0f4c4c;
+    --notdone-bg: #f1f2f1;
+    --notdone-ink: #7a8685;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+  }
+  header {
+    background: var(--teal);
+    padding: 16px 16px 14px;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+  }
+  .header-row { display: flex; align-items: center; justify-content: space-between; }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand svg { flex-shrink: 0; }
+  .title { color: #fff; font-size: 16px; font-weight: 600; letter-spacing: -0.2px; }
+  .subtitle { color: #a8c4c0; font-size: 11.5px; margin-top: 1px; }
+  .icon-btn {
+    background: rgba(255,255,255,0.12);
+    border: none; border-radius: 8px; width: 34px; height: 34px;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .icon-btn svg { stroke: #fff; }
+  .notice {
+    margin-top: 10px; font-size: 11.5px; color: #dcece9;
+    background: rgba(255,255,255,0.08); border-radius: 6px; padding: 7px 9px; line-height: 1.45;
+  }
+  main { padding: 14px 12px 90px; max-width: 640px; margin: 0 auto; }
+  .search-wrap { margin-bottom: 10px; }
+  #search-box {
+    width: 100%; font-size: 15px; padding: 10px 12px; border-radius: 9px;
+    border: 1px solid var(--line); background: #fff; color: #22302f;
+  }
+  .banner { font-size: 13px; padding: 9px 11px; border-radius: 8px; margin-bottom: 10px; }
+  .banner.error { background: var(--danger-bg); color: var(--danger-ink); }
+  .banner.info { background: var(--teal-light); color: var(--teal); }
+  .center-row {
+    display: flex; align-items: center; justify-content: center;
+    padding: 40px 0; color: var(--muted); font-size: 13.5px; gap: 8px;
+  }
+  .empty { text-align: center; padding: 50px 20px; }
+  .empty .h { font-size: 15px; color: #3a4444; margin-bottom: 4px; }
+  .empty .s { font-size: 13px; color: #8a9595; }
+  .list { display: flex; flex-direction: column; gap: 10px; }
+  .card {
+    background: var(--card); border-radius: 12px; padding: 12px 14px;
+    box-shadow: 0 1px 2px rgba(15,76,76,0.08); border: 1px solid #e4eae8;
+  }
+  .card-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .case-id { font-size: 15px; font-weight: 600; color: var(--ink); letter-spacing: -0.1px; word-break: break-word; }
+  .initials {
+    font-size: 11px; font-weight: 700; color: var(--teal);
+    background: var(--teal-light); border-radius: 5px; padding: 2px 6px; flex-shrink: 0;
+  }
+  .meta-row { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+  .field-block { margin-top: 8px; }
+  .field-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.4px; color: #9aa9a8; font-weight: 600; }
+  .field-text { font-size: 13.5px; color: #374242; margin-top: 2px; line-height: 1.45; white-space: pre-wrap; }
+  .tag-row { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  .tag {
+    font-size: 11px; font-weight: 600; border-radius: 5px; padding: 3px 7px;
+  }
+  .tag.done { background: var(--done-bg); color: var(--done-ink); }
+  .tag.notdone { background: var(--notdone-bg); color: var(--notdone-ink); }
+  .timestamp { font-size: 11px; color: #a8b4b3; margin-top: 8px; }
+
+  .fab {
+    position: fixed; bottom: 20px; right: 18px; width: 54px; height: 54px;
+    border-radius: 27px; background: var(--teal); border: none;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 14px rgba(15,76,76,0.35); cursor: pointer;
+  }
+  .overlay {
+    position: fixed; inset: 0; background: rgba(15,30,29,0.4);
+    display: flex; align-items: flex-end; z-index: 10;
+  }
+  .overlay.hidden { display: none; }
+  .sheet {
+    background: #fff; width: 100%; border-radius: 16px 16px 0 0;
+    padding: 16px 16px 28px; max-height: 88vh; overflow-y: auto;
+    margin: 0 auto; max-width: 640px;
+  }
+  .sheet-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .sheet-title { font-size: 16px; font-weight: 600; color: var(--ink); }
+  form { display: flex; flex-direction: column; gap: 12px; }
+  label { display: flex; flex-direction: column; font-size: 12.5px; color: #4a5555; font-weight: 600; gap: 5px; }
+  input, textarea, select {
+    font: inherit; font-size: 15px; padding: 10px 10px; border-radius: 8px;
+    border: 1px solid var(--line); color: #22302f; font-weight: 400; width: 100%;
+  }
+  textarea { min-height: 56px; resize: vertical; }
+  input:focus, textarea:focus, select:focus, button:focus-visible {
+    outline: 2px solid var(--teal); outline-offset: 1px;
+  }
+  .section-heading {
+    border-top: 1px solid var(--line); margin: 2px 0 4px; padding-top: 12px;
+    font-size: 12.5px; font-weight: 700; color: var(--teal);
+    text-transform: uppercase; letter-spacing: 0.4px;
+  }
+  .findings-wrap { display: none; }
+  .findings-wrap.show { display: flex; }
+  .save-btn {
+    margin-top: 6px; background: var(--teal); color: #fff; border: none;
+    border-radius: 9px; padding: 13px; font-size: 15px; font-weight: 600; cursor: pointer;
+  }
+  .save-btn:disabled { opacity: 0.6; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-row">
+    <div class="brand">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18h8"/><path d="M3 22h18"/><path d="M14 22a7 7 0 1 0 0-14h-1"/><path d="M9 14h2"/><path d="M9.17 4.17A7 7 0 0 0 6 10.09V14"/><path d="M9 4h4"/><path d="M11 2v6"/></svg>
+      <div>
+        <div class="title">Hemepath Case Log</div>
+        <div class="subtitle">Shared &middot; all faculty see the same list</div>
+      </div>
+    </div>
+    <button class="icon-btn" onclick="loadCases()" aria-label="Refresh">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+    </button>
+  </div>
+  <div class="notice">
+    Prototype — use Sample IDs, not patient names. This link isn't login-protected: anyone with it can view and add entries.
+  </div>
+</header>
+
+<main>
+  <div id="banner-area"></div>
+  <div class="search-wrap">
+    <input type="text" id="search-box" placeholder="Search by sample ID, diagnosis, findings…" />
+  </div>
+  <div id="list-area">
+    <div class="center-row">Loading cases…</div>
+  </div>
+</main>
+
+<button class="fab" onclick="openForm()" aria-label="New case">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+</button>
+
+<div class="overlay hidden" id="overlay" onclick="closeFormBg(event)">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-header">
+      <span class="sheet-title">New case</span>
+      <button class="icon-btn" style="background:#eef2f1;" onclick="closeForm()" aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5b6b6b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <form id="case-form">
+      <label>Sample ID *
+        <input type="text" id="sampleId" placeholder="e.g. HP-2026-0142" required />
+      </label>
+      <label>Age &amp; Sex
+        <input type="text" id="ageSex" placeholder="e.g. 45/M" />
+      </label>
+      <label>Clinical presentation
+        <textarea id="clinicalPresentation" placeholder="Brief relevant history / presentation"></textarea>
+      </label>
+      <label>Sample type
+        <select id="sampleType">
+          <option>Peripheral Smear</option>
+          <option>BM Aspirate</option>
+          <option>Trephine Biopsy</option>
+        </select>
+      </label>
+
+      <div class="section-heading">Ancillary Tests</div>
+
+      <label>Flow cytometry
+        <select id="flowCytometryStatus">
+          <option>Not done</option>
+          <option>Done</option>
+        </select>
+      </label>
+      <label class="findings-wrap" id="flowFindingsWrap">
+        Flow cytometry findings
+        <textarea id="flowCytometryFindings" placeholder="Panel used and key findings"></textarea>
+      </label>
+
+      <label>Genetic study
+        <select id="geneticStudyStatus">
+          <option>Not done</option>
+          <option>Done</option>
+        </select>
+      </label>
+      <label class="findings-wrap" id="geneticFindingsWrap">
+        Genetic study findings
+        <textarea id="geneticStudyFindings" placeholder="Test done and result"></textarea>
+      </label>
+
+      <label>Remarks
+        <textarea id="remarks" placeholder="Any additional remarks"></textarea>
+      </label>
+      <label>Faculty initial *
+        <input type="text" id="facultyInitial" placeholder="e.g. PN" maxlength="6" required />
+      </label>
+      <button type="submit" class="save-btn" id="save-btn">Save case</button>
+    </form>
+  </div>
+</div>
+
+<script>
+  // ================================================================
+  // PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL HERE. It looks like:
+  // https://script.google.com/macros/s/XXXXXXXXXXXX/exec
+  // ================================================================
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwZtuXwaysiGHvzvr1InbA8Rs7c12bihB8JCundsvvPm6PMBmCwKPb5SwcifYxsQ6Herg/exec";
+
+  const listArea = document.getElementById("list-area");
+  const bannerArea = document.getElementById("banner-area");
+  const overlay = document.getElementById("overlay");
+  const form = document.getElementById("case-form");
+  const saveBtn = document.getElementById("save-btn");
+  const searchBox = document.getElementById("search-box");
+  let allCases = [];
+
+  function showBanner(msg, type) {
+    bannerArea.innerHTML = '<div class="banner ' + type + '">' + msg + "</div>";
+  }
+  function clearBanner() {
+    bannerArea.innerHTML = "";
+  }
+  function escapeHtml(str) {
+    const d = document.createElement("div");
+    d.innerText = str == null ? "" : String(str);
+    return d.innerHTML;
+  }
+  function timeAgo(dateStr) {
+    const then = new Date(dateStr).getTime();
+    if (isNaN(then)) return "";
+    const s = Math.floor((Date.now() - then) / 1000);
+    if (s < 60) return "just now";
+    const m = Math.floor(s / 60);
+    if (m < 60) return m + "m ago";
+    const h = Math.floor(m / 60);
+    if (h < 24) return h + "h ago";
+    const d = Math.floor(h / 24);
+    return d + "d ago";
+  }
+
+  async function loadCases() {
+    if (SCRIPT_URL.indexOf("PASTE_YOUR_SCRIPT_URL_HERE") !== -1) {
+      listArea.innerHTML = "";
+      showBanner("Setup needed: paste your Google Apps Script URL into index.html (see SCRIPT_URL near the top of the script).", "error");
+      return;
+    }
+    listArea.innerHTML = '<div class="center-row">Loading cases…</div>';
+    try {
+      const res = await fetch(SCRIPT_URL);
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || "Unknown error");
+      allCases = data.cases || [];
+      applyFilter();
+      clearBanner();
+    } catch (err) {
+      listArea.innerHTML = "";
+      showBanner("Couldn't load cases. Check your connection and try refreshing.", "error");
+    }
+  }
+
+  function applyFilter() {
+    const q = searchBox.value.trim().toLowerCase();
+    if (!q) {
+      renderList(allCases);
+      return;
+    }
+    const filtered = allCases.filter(function (c) {
+      const haystack = [
+        c.SampleID, c.AgeSex, c.ClinicalPresentation, c.SampleType,
+        c.FlowCytometryStatus, c.FlowCytometryFindings,
+        c.GeneticStudyStatus, c.GeneticStudyFindings,
+        c.Remarks, c.FacultyInitial
+      ].map(function (v) { return (v == null ? "" : String(v)).toLowerCase(); }).join(" ");
+      return haystack.indexOf(q) !== -1;
+    });
+    renderList(filtered);
+  }
+  searchBox.addEventListener("input", applyFilter);
+
+  function ancillaryTag(label, status) {
+    const isDone = String(status).trim().toLowerCase() === "done";
+    const cls = isDone ? "done" : "notdone";
+    return '<span class="tag ' + cls + '">' + label + ": " + escapeHtml(status || "Not done") + "</span>";
+  }
+
+  function renderList(cases) {
+    if (!cases.length) {
+      if (allCases.length && searchBox.value.trim()) {
+        listArea.innerHTML = '<div class="empty"><div class="h">No matches</div><div class="s">Try a different search term.</div></div>';
+      } else {
+        listArea.innerHTML = '<div class="empty"><div class="h">No cases logged yet</div><div class="s">Tap the + button to add the first entry.</div></div>';
+      }
+      return;
+    }
+    let html = '<div class="list">';
+    cases.forEach(function (c) {
+      html += '<div class="card">';
+      html += '<div class="card-top"><span class="case-id">' + escapeHtml(c.SampleID) + '</span>';
+      html += '<span class="initials">' + escapeHtml(c.FacultyInitial) + "</span></div>";
+      const metaParts = [c.AgeSex, c.SampleType].filter(Boolean).map(escapeHtml);
+      if (metaParts.length) html += '<div class="meta-row">' + metaParts.join(" &middot; ") + "</div>";
+      if (c.ClinicalPresentation) {
+        html += '<div class="field-block"><div class="field-label">Clinical Presentation</div><div class="field-text">' + escapeHtml(c.ClinicalPresentation) + "</div></div>";
+      }
+      html += '<div class="tag-row">' + ancillaryTag("Flow", c.FlowCytometryStatus) + ancillaryTag("Genetics", c.GeneticStudyStatus) + "</div>";
+      if (c.FlowCytometryFindings) {
+        html += '<div class="field-block"><div class="field-label">Flow Cytometry Findings</div><div class="field-text">' + escapeHtml(c.FlowCytometryFindings) + "</div></div>";
+      }
+      if (c.GeneticStudyFindings) {
+        html += '<div class="field-block"><div class="field-label">Genetic Study Findings</div><div class="field-text">' + escapeHtml(c.GeneticStudyFindings) + "</div></div>";
+      }
+      if (c.Remarks) {
+        html += '<div class="field-block"><div class="field-label">Remarks</div><div class="field-text">' + escapeHtml(c.Remarks) + "</div></div>";
+      }
+      html += '<div class="timestamp">' + timeAgo(c.Timestamp) + "</div>";
+      html += "</div>";
+    });
+    html += "</div>";
+    listArea.innerHTML = html;
+  }
+
+  function openForm() {
+    overlay.classList.remove("hidden");
+    document.getElementById("sampleId").focus();
+  }
+  function closeForm() {
+    overlay.classList.add("hidden");
+    form.reset();
+    toggleFindings();
+  }
+  function closeFormBg(e) {
+    if (e.target === overlay) closeForm();
+  }
+
+  function toggleFindings() {
+    const flowWrap = document.getElementById("flowFindingsWrap");
+    const geneticWrap = document.getElementById("geneticFindingsWrap");
+    flowWrap.classList.toggle("show", document.getElementById("flowCytometryStatus").value === "Done");
+    geneticWrap.classList.toggle("show", document.getElementById("geneticStudyStatus").value === "Done");
+  }
+  document.getElementById("flowCytometryStatus").addEventListener("change", toggleFindings);
+  document.getElementById("geneticStudyStatus").addEventListener("change", toggleFindings);
+  toggleFindings();
+
+  form.addEventListener("submit", async function (e) {
+    e.preventDefault();
+    const sampleId = document.getElementById("sampleId").value.trim();
+    const facultyInitial = document.getElementById("facultyInitial").value.trim().toUpperCase();
+    if (!sampleId || !facultyInitial) {
+      showBanner("Sample ID and faculty initial are required.", "error");
+      return;
+    }
+    const payload = {
+      sampleId: sampleId,
+      ageSex: document.getElementById("ageSex").value.trim(),
+      clinicalPresentation: document.getElementById("clinicalPresentation").value.trim(),
+      sampleType: document.getElementById("sampleType").value,
+      flowCytometryStatus: document.getElementById("flowCytometryStatus").value,
+      flowCytometryFindings: document.getElementById("flowCytometryStatus").value === "Done"
+        ? document.getElementById("flowCytometryFindings").value.trim() : "",
+      geneticStudyStatus: document.getElementById("geneticStudyStatus").value,
+      geneticStudyFindings: document.getElementById("geneticStudyStatus").value === "Done"
+        ? document.getElementById("geneticStudyFindings").value.trim() : "",
+      remarks: document.getElementById("remarks").value.trim(),
+      facultyInitial: facultyInitial,
+    };
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Saving…";
+    try {
+      const res = await fetch(SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || "Save failed");
+      closeForm();
+      clearBanner();
+      await loadCases();
+    } catch (err) {
+      showBanner("Couldn't save this case. Please try again.", "error");
+    }
+    saveBtn.disabled = false;
+    saveBtn.textContent = "Save case";
+  });
+
+  loadCases();
+</script>
+
+</body>
+</html>
