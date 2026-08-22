@@ -87,6 +87,12 @@
   .tag.done { background: var(--done-bg); color: var(--done-ink); }
   .tag.notdone { background: var(--notdone-bg); color: var(--notdone-ink); }
   .timestamp { font-size: 11px; color: #a8b4b3; margin-top: 8px; }
+  .card-actions { display: flex; gap: 8px; margin-top: 10px; }
+  .chip-btn {
+    font-size: 12px; font-weight: 600; border-radius: 7px; padding: 6px 12px;
+    border: 1px solid var(--line); background: #fff; color: var(--teal); cursor: pointer;
+  }
+  .chip-btn.danger { color: var(--danger-ink); border-color: #f0d3d0; }
 
   .fab {
     position: fixed; bottom: 20px; right: 18px; width: 54px; height: 54px;
@@ -167,7 +173,7 @@
 <div class="overlay hidden" id="overlay" onclick="closeFormBg(event)">
   <div class="sheet" onclick="event.stopPropagation()">
     <div class="sheet-header">
-      <span class="sheet-title">New case</span>
+      <span class="sheet-title" id="sheet-title">New case</span>
       <button class="icon-btn" style="background:#eef2f1;" onclick="closeForm()" aria-label="Close">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5b6b6b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
@@ -188,6 +194,9 @@
           <option>BM Aspirate</option>
           <option>Trephine Biopsy</option>
         </select>
+      </label>
+      <label>Diagnosis
+        <textarea id="diagnosis" placeholder="Provisional or final diagnosis"></textarea>
       </label>
 
       <div class="section-heading">Ancillary Tests</div>
@@ -239,6 +248,7 @@
   const saveBtn = document.getElementById("save-btn");
   const searchBox = document.getElementById("search-box");
   let allCases = [];
+  let editingId = null;
 
   function showBanner(msg, type) {
     bannerArea.innerHTML = '<div class="banner ' + type + '">' + msg + "</div>";
@@ -292,7 +302,7 @@
     }
     const filtered = allCases.filter(function (c) {
       const haystack = [
-        c.SampleID, c.AgeSex, c.ClinicalPresentation, c.SampleType,
+        c.SampleID, c.AgeSex, c.ClinicalPresentation, c.SampleType, c.Diagnosis,
         c.FlowCytometryStatus, c.FlowCytometryFindings,
         c.GeneticStudyStatus, c.GeneticStudyFindings,
         c.Remarks, c.FacultyInitial
@@ -328,6 +338,9 @@
       if (c.ClinicalPresentation) {
         html += '<div class="field-block"><div class="field-label">Clinical Presentation</div><div class="field-text">' + escapeHtml(c.ClinicalPresentation) + "</div></div>";
       }
+      if (c.Diagnosis) {
+        html += '<div class="field-block"><div class="field-label">Diagnosis</div><div class="field-text">' + escapeHtml(c.Diagnosis) + "</div></div>";
+      }
       html += '<div class="tag-row">' + ancillaryTag("Flow", c.FlowCytometryStatus) + ancillaryTag("Genetics", c.GeneticStudyStatus) + "</div>";
       if (c.FlowCytometryFindings) {
         html += '<div class="field-block"><div class="field-label">Flow Cytometry Findings</div><div class="field-text">' + escapeHtml(c.FlowCytometryFindings) + "</div></div>";
@@ -339,6 +352,12 @@
         html += '<div class="field-block"><div class="field-label">Remarks</div><div class="field-text">' + escapeHtml(c.Remarks) + "</div></div>";
       }
       html += '<div class="timestamp">' + timeAgo(c.Timestamp) + "</div>";
+      if (c.ID) {
+        html += '<div class="card-actions">';
+        html += '<button type="button" class="chip-btn" onclick="startEdit(\'' + escapeHtml(c.ID) + '\')">Edit</button>';
+        html += '<button type="button" class="chip-btn danger" onclick="confirmDelete(\'' + escapeHtml(c.ID) + '\')">Delete</button>';
+        html += "</div>";
+      }
       html += "</div>";
     });
     html += "</div>";
@@ -346,16 +365,59 @@
   }
 
   function openForm() {
+    editingId = null;
+    document.getElementById("sheet-title").textContent = "New case";
+    saveBtn.textContent = "Save case";
     overlay.classList.remove("hidden");
     document.getElementById("sampleId").focus();
   }
   function closeForm() {
     overlay.classList.add("hidden");
     form.reset();
+    editingId = null;
+    document.getElementById("sheet-title").textContent = "New case";
+    saveBtn.textContent = "Save case";
     toggleFindings();
   }
   function closeFormBg(e) {
     if (e.target === overlay) closeForm();
+  }
+
+  function startEdit(id) {
+    const c = allCases.find(function (x) { return String(x.ID) === String(id); });
+    if (!c) return;
+    editingId = id;
+    document.getElementById("sampleId").value = c.SampleID || "";
+    document.getElementById("ageSex").value = c.AgeSex || "";
+    document.getElementById("clinicalPresentation").value = c.ClinicalPresentation || "";
+    document.getElementById("sampleType").value = c.SampleType || "Peripheral Smear";
+    document.getElementById("diagnosis").value = c.Diagnosis || "";
+    document.getElementById("flowCytometryStatus").value = c.FlowCytometryStatus || "Not done";
+    document.getElementById("flowCytometryFindings").value = c.FlowCytometryFindings || "";
+    document.getElementById("geneticStudyStatus").value = c.GeneticStudyStatus || "Not done";
+    document.getElementById("geneticStudyFindings").value = c.GeneticStudyFindings || "";
+    document.getElementById("remarks").value = c.Remarks || "";
+    document.getElementById("facultyInitial").value = c.FacultyInitial || "";
+    toggleFindings();
+    document.getElementById("sheet-title").textContent = "Edit case";
+    saveBtn.textContent = "Update case";
+    overlay.classList.remove("hidden");
+  }
+
+  async function confirmDelete(id) {
+    if (!confirm("Delete this case entry? This can't be undone.")) return;
+    try {
+      const res = await fetch(SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ action: "delete", id: id }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || "Delete failed");
+      await loadCases();
+    } catch (err) {
+      showBanner("Couldn't delete this case. Please try again.", "error");
+    }
   }
 
   function toggleFindings() {
@@ -377,10 +439,13 @@
       return;
     }
     const payload = {
+      action: editingId ? "update" : "create",
+      id: editingId || undefined,
       sampleId: sampleId,
       ageSex: document.getElementById("ageSex").value.trim(),
       clinicalPresentation: document.getElementById("clinicalPresentation").value.trim(),
       sampleType: document.getElementById("sampleType").value,
+      diagnosis: document.getElementById("diagnosis").value.trim(),
       flowCytometryStatus: document.getElementById("flowCytometryStatus").value,
       flowCytometryFindings: document.getElementById("flowCytometryStatus").value === "Done"
         ? document.getElementById("flowCytometryFindings").value.trim() : "",
@@ -391,7 +456,7 @@
       facultyInitial: facultyInitial,
     };
     saveBtn.disabled = true;
-    saveBtn.textContent = "Saving…";
+    saveBtn.textContent = editingId ? "Updating…" : "Saving…";
     try {
       const res = await fetch(SCRIPT_URL, {
         method: "POST",
@@ -404,10 +469,10 @@
       clearBanner();
       await loadCases();
     } catch (err) {
-      showBanner("Couldn't save this case. Please try again.", "error");
+      showBanner(editingId ? "Couldn't update this case. Please try again." : "Couldn't save this case. Please try again.", "error");
     }
     saveBtn.disabled = false;
-    saveBtn.textContent = "Save case";
+    saveBtn.textContent = editingId ? "Update case" : "Save case";
   });
 
   loadCases();
