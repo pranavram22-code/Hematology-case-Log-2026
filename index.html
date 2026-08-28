@@ -93,6 +93,28 @@
     border: 1px solid var(--line); background: #fff; color: var(--teal); cursor: pointer;
   }
   .chip-btn.danger { color: var(--danger-ink); border-color: #f0d3d0; }
+  .card.clickable { cursor: pointer; }
+  .card.clickable:active { background: #fbfcfc; }
+  .snippet { font-size: 13px; color: #5b6b6b; margin-top: 6px; line-height: 1.4;
+    overflow: hidden; text-overflow: ellipsis; display: -webkit-box;
+    -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .detail-body { display: flex; flex-direction: column; gap: 2px; }
+  .attach-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+  .attach-chip {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    font-size: 12.5px; background: #f6f8f7; border: 1px solid #e4eae8;
+    border-radius: 7px; padding: 6px 8px;
+  }
+  .attach-chip a {
+    color: var(--teal); font-weight: 600; text-decoration: none;
+    display: flex; align-items: center; gap: 6px; min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .attach-chip a svg { flex-shrink: 0; }
+  .attach-remove {
+    background: none; border: none; color: var(--danger-ink); cursor: pointer;
+    font-size: 15px; line-height: 1; flex-shrink: 0; padding: 2px 4px;
+  }
 
   .fab {
     position: fixed; bottom: 20px; right: 18px; width: 54px; height: 54px;
@@ -229,8 +251,24 @@
       <label>Faculty initial *
         <input type="text" id="facultyInitial" placeholder="e.g. PN" maxlength="6" required />
       </label>
+      <label>Attachments (JPEG, PNG, PDF)
+        <input type="file" id="attachmentFiles" accept="image/jpeg,image/png,application/pdf" multiple />
+      </label>
+      <div class="attach-list" id="existing-attachments"></div>
       <button type="submit" class="save-btn" id="save-btn">Save case</button>
     </form>
+  </div>
+</div>
+
+<div class="overlay hidden" id="detail-overlay" onclick="closeDetailBg(event)">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-header">
+      <span class="sheet-title">Case detail</span>
+      <button class="icon-btn" style="background:#eef2f1;" onclick="closeDetail()" aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5b6b6b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="detail-body" id="detail-body"></div>
   </div>
 </div>
 
@@ -248,6 +286,7 @@
   const saveBtn = document.getElementById("save-btn");
   const searchBox = document.getElementById("search-box");
   let allCases = [];
+  let allAttachments = [];
   let editingId = null;
 
   function showBanner(msg, type) {
@@ -286,6 +325,7 @@
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || "Unknown error");
       allCases = data.cases || [];
+      allAttachments = data.attachments || [];
       applyFilter();
       clearBanner();
     } catch (err) {
@@ -313,6 +353,29 @@
   }
   searchBox.addEventListener("input", applyFilter);
 
+  function fileIconSvg(mimeType) {
+    if (mimeType && mimeType.indexOf("image/") === 0) {
+      return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>';
+    }
+    return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+  }
+
+  function renderAttachments(caseId, removable) {
+    const files = allAttachments.filter(function (a) { return String(a.CaseID) === String(caseId); });
+    if (!files.length) return "";
+    let html = '<div class="attach-list">';
+    files.forEach(function (a) {
+      html += '<div class="attach-chip">';
+      html += '<a href="' + escapeHtml(a.FileUrl) + '" target="_blank" rel="noopener">' + fileIconSvg(a.MimeType) + escapeHtml(a.FileName) + "</a>";
+      if (removable) {
+        html += '<button type="button" class="attach-remove" onclick="confirmDeleteAttachment(\'' + escapeHtml(a.ID) + '\')" aria-label="Remove">&times;</button>';
+      }
+      html += "</div>";
+    });
+    html += "</div>";
+    return html;
+  }
+
   function ancillaryTag(label, status) {
     const isDone = String(status).trim().toLowerCase() === "done";
     const cls = isDone ? "done" : "notdone";
@@ -330,44 +393,70 @@
     }
     let html = '<div class="list">';
     cases.forEach(function (c) {
-      html += '<div class="card">';
+      html += '<div class="card clickable" onclick="showDetail(\'' + escapeHtml(c.ID) + '\')">';
       html += '<div class="card-top"><span class="case-id">' + escapeHtml(c.SampleID) + '</span>';
       html += '<span class="initials">' + escapeHtml(c.FacultyInitial) + "</span></div>";
       const metaParts = [c.AgeSex, c.SampleType].filter(Boolean).map(escapeHtml);
       if (metaParts.length) html += '<div class="meta-row">' + metaParts.join(" &middot; ") + "</div>";
-      if (c.ClinicalPresentation) {
-        html += '<div class="field-block"><div class="field-label">Clinical Presentation</div><div class="field-text">' + escapeHtml(c.ClinicalPresentation) + "</div></div>";
-      }
-      if (c.Diagnosis) {
-        html += '<div class="field-block"><div class="field-label">Diagnosis</div><div class="field-text">' + escapeHtml(c.Diagnosis) + "</div></div>";
-      }
+      if (c.Diagnosis) html += '<div class="snippet">' + escapeHtml(c.Diagnosis) + "</div>";
       html += '<div class="tag-row">' + ancillaryTag("Flow", c.FlowCytometryStatus) + ancillaryTag("Genetics", c.GeneticStudyStatus) + "</div>";
-      if (c.FlowCytometryFindings) {
-        html += '<div class="field-block"><div class="field-label">Flow Cytometry Findings</div><div class="field-text">' + escapeHtml(c.FlowCytometryFindings) + "</div></div>";
-      }
-      if (c.GeneticStudyFindings) {
-        html += '<div class="field-block"><div class="field-label">Genetic Study Findings</div><div class="field-text">' + escapeHtml(c.GeneticStudyFindings) + "</div></div>";
-      }
-      if (c.Remarks) {
-        html += '<div class="field-block"><div class="field-label">Remarks</div><div class="field-text">' + escapeHtml(c.Remarks) + "</div></div>";
-      }
       html += '<div class="timestamp">' + timeAgo(c.Timestamp) + "</div>";
-      if (c.ID) {
-        html += '<div class="card-actions">';
-        html += '<button type="button" class="chip-btn" onclick="startEdit(\'' + escapeHtml(c.ID) + '\')">Edit</button>';
-        html += '<button type="button" class="chip-btn danger" onclick="confirmDelete(\'' + escapeHtml(c.ID) + '\')">Delete</button>';
-        html += "</div>";
-      }
       html += "</div>";
     });
     html += "</div>";
     listArea.innerHTML = html;
   }
 
+  function caseDetailHtml(c) {
+    let html = '<div class="card-top"><span class="case-id">' + escapeHtml(c.SampleID) + '</span>';
+    html += '<span class="initials">' + escapeHtml(c.FacultyInitial) + "</span></div>";
+    const metaParts = [c.AgeSex, c.SampleType].filter(Boolean).map(escapeHtml);
+    if (metaParts.length) html += '<div class="meta-row">' + metaParts.join(" &middot; ") + "</div>";
+    if (c.ClinicalPresentation) {
+      html += '<div class="field-block"><div class="field-label">Clinical Presentation</div><div class="field-text">' + escapeHtml(c.ClinicalPresentation) + "</div></div>";
+    }
+    if (c.Diagnosis) {
+      html += '<div class="field-block"><div class="field-label">Diagnosis</div><div class="field-text">' + escapeHtml(c.Diagnosis) + "</div></div>";
+    }
+    html += '<div class="tag-row">' + ancillaryTag("Flow", c.FlowCytometryStatus) + ancillaryTag("Genetics", c.GeneticStudyStatus) + "</div>";
+    if (c.FlowCytometryFindings) {
+      html += '<div class="field-block"><div class="field-label">Flow Cytometry Findings</div><div class="field-text">' + escapeHtml(c.FlowCytometryFindings) + "</div></div>";
+    }
+    if (c.GeneticStudyFindings) {
+      html += '<div class="field-block"><div class="field-label">Genetic Study Findings</div><div class="field-text">' + escapeHtml(c.GeneticStudyFindings) + "</div></div>";
+    }
+    if (c.Remarks) {
+      html += '<div class="field-block"><div class="field-label">Remarks</div><div class="field-text">' + escapeHtml(c.Remarks) + "</div></div>";
+    }
+    html += '<div class="timestamp">' + timeAgo(c.Timestamp) + "</div>";
+    html += renderAttachments(c.ID, true);
+    if (c.ID) {
+      html += '<div class="card-actions">';
+      html += '<button type="button" class="chip-btn" onclick="closeDetail(); startEdit(\'' + escapeHtml(c.ID) + '\')">Edit</button>';
+      html += '<button type="button" class="chip-btn danger" onclick="closeDetail(); confirmDelete(\'' + escapeHtml(c.ID) + '\')">Delete</button>';
+      html += "</div>";
+    }
+    return html;
+  }
+
+  function showDetail(id) {
+    const c = allCases.find(function (x) { return String(x.ID) === String(id); });
+    if (!c) return;
+    document.getElementById("detail-body").innerHTML = caseDetailHtml(c);
+    document.getElementById("detail-overlay").classList.remove("hidden");
+  }
+  function closeDetail() {
+    document.getElementById("detail-overlay").classList.add("hidden");
+  }
+  function closeDetailBg(e) {
+    if (e.target === document.getElementById("detail-overlay")) closeDetail();
+  }
+
   function openForm() {
     editingId = null;
     document.getElementById("sheet-title").textContent = "New case";
     saveBtn.textContent = "Save case";
+    document.getElementById("existing-attachments").innerHTML = "";
     overlay.classList.remove("hidden");
     document.getElementById("sampleId").focus();
   }
@@ -398,10 +487,60 @@
     document.getElementById("geneticStudyFindings").value = c.GeneticStudyFindings || "";
     document.getElementById("remarks").value = c.Remarks || "";
     document.getElementById("facultyInitial").value = c.FacultyInitial || "";
+    document.getElementById("existing-attachments").innerHTML = renderAttachments(c.ID, true);
     toggleFindings();
     document.getElementById("sheet-title").textContent = "Edit case";
     saveBtn.textContent = "Update case";
     overlay.classList.remove("hidden");
+  }
+
+  async function confirmDeleteAttachment(id) {
+    if (!confirm("Remove this attachment? This can't be undone.")) return;
+    try {
+      const res = await fetch(SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ action: "deleteAttachment", id: id }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || "Delete failed");
+      await loadCases();
+      if (editingId) {
+        document.getElementById("existing-attachments").innerHTML = renderAttachments(editingId, true);
+      }
+    } catch (err) {
+      showBanner("Couldn't remove this attachment. Please try again.", "error");
+    }
+  }
+
+  function fileToBase64(file) {
+    return new Promise(function (resolve, reject) {
+      const reader = new FileReader();
+      reader.onload = function () {
+        const result = reader.result;
+        resolve(result.substring(result.indexOf(",") + 1));
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function uploadAttachments(caseId, files) {
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const fileData = await fileToBase64(file);
+      await fetch(SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({
+          action: "addAttachment",
+          caseId: caseId,
+          fileName: file.name,
+          mimeType: file.type || "application/octet-stream",
+          fileData: fileData,
+        }),
+      });
+    }
   }
 
   async function confirmDelete(id) {
@@ -465,6 +604,12 @@
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || "Save failed");
+      const savedCaseId = editingId || data.id;
+      const fileInput = document.getElementById("attachmentFiles");
+      if (savedCaseId && fileInput.files.length) {
+        saveBtn.textContent = "Uploading attachments…";
+        await uploadAttachments(savedCaseId, fileInput.files);
+      }
       closeForm();
       clearBanner();
       await loadCases();
