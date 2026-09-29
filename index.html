@@ -4,158 +4,194 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Hemepath Case Log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Fraunces:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
 <style>
+  /*
+    Palette drawn from a Wright-Giemsa stained blood smear under the scope:
+    violet nuclei, magenta-pink eosin, and the lab's own teal — on a near-black
+    background like a dim microscopy room. Each accent has a job, not just decoration:
+    violet = identity/faculty, magenta = diagnosis, teal = confirmed/done, amber = caution.
+  */
   :root {
-    --ink: #12302f;
-    --teal: #0f4c4c;
-    --teal-light: #e3efec;
-    --line: #d5dedc;
-    --muted: #5b6b6b;
-    --bg: #f5f7f6;
-    --card: #ffffff;
-    --danger-bg: #fdeceb;
-    --danger-ink: #9a3b34;
-    --done-bg: #e3efec;
-    --done-ink: #0f4c4c;
-    --notdone-bg: #f1f2f1;
-    --notdone-ink: #7a8685;
+    --bg: #0a0c11;
+    --bg-2: #0e1117;
+    --surface: #161a23;
+    --surface-2: #1d222d;
+    --border: #2a3040;
+    --ink: #eef1f7;
+    --ink-dim: #c3c9d8;
+    --muted: #838ba1;
+
+    --violet: #a891f7;
+    --violet-soft: rgba(168,145,247,0.16);
+    --magenta: #f2699e;
+    --magenta-soft: rgba(242,105,158,0.15);
+    --teal: #35d6be;
+    --teal-soft: rgba(53,214,190,0.15);
+    --amber: #f0b94e;
+    --amber-soft: rgba(240,185,78,0.15);
+    --crimson: #f47175;
+    --crimson-soft: rgba(244,113,117,0.15);
   }
   * { box-sizing: border-box; }
   body {
     margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-family: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     background: var(--bg);
     color: var(--ink);
   }
   header {
-    background: var(--teal);
-    padding: 16px 16px 14px;
+    background: radial-gradient(120% 160% at 12% -20%, #2c1f4d 0%, var(--bg-2) 55%);
+    padding: 18px 16px 15px;
     position: sticky;
     top: 0;
     z-index: 5;
+    border-bottom: 1px solid var(--border);
   }
   .header-row { display: flex; align-items: center; justify-content: space-between; }
-  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand { display: flex; align-items: center; gap: 11px; }
+  .brand-mark {
+    width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--violet), var(--magenta));
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 3px 12px rgba(168,145,247,0.35);
+  }
   .brand svg { flex-shrink: 0; }
-  .title { color: #fff; font-size: 16px; font-weight: 600; letter-spacing: -0.2px; }
-  .subtitle { color: #a8c4c0; font-size: 11.5px; margin-top: 1px; }
+  .title {
+    font-family: "Fraunces", Georgia, serif; font-style: italic;
+    color: #fff; font-size: 18px; font-weight: 600; letter-spacing: -0.2px;
+  }
+  .subtitle { color: var(--muted); font-size: 11.5px; margin-top: 1px; font-weight: 500; }
   .icon-btn {
-    background: rgba(255,255,255,0.12);
-    border: none; border-radius: 8px; width: 34px; height: 34px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 9px; width: 34px; height: 34px;
     display: flex; align-items: center; justify-content: center; cursor: pointer;
   }
   .icon-btn svg { stroke: #fff; }
+  .icon-btn-subtle { background: var(--surface-2); border-color: var(--border); }
+  .icon-btn-subtle svg { stroke: var(--ink-dim); }
   .notice {
-    margin-top: 10px; font-size: 11.5px; color: #dcece9;
-    background: rgba(255,255,255,0.08); border-radius: 6px; padding: 7px 9px; line-height: 1.45;
+    margin-top: 11px; font-size: 11.5px; color: var(--ink-dim);
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 8px; padding: 8px 10px; line-height: 1.5;
   }
   main { padding: 14px 12px 90px; max-width: 640px; margin: 0 auto; }
   .search-wrap { margin-bottom: 10px; }
   #search-box {
-    width: 100%; font-size: 15px; padding: 10px 12px; border-radius: 9px;
-    border: 1px solid var(--line); background: #fff; color: #22302f;
+    width: 100%; font-size: 15px; padding: 11px 13px; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--surface); color: var(--ink);
   }
-  .banner { font-size: 13px; padding: 9px 11px; border-radius: 8px; margin-bottom: 10px; }
-  .banner.error { background: var(--danger-bg); color: var(--danger-ink); }
-  .banner.info { background: var(--teal-light); color: var(--teal); }
+  #search-box::placeholder { color: var(--muted); }
+  #search-box:focus { outline: none; border-color: var(--violet); box-shadow: 0 0 0 3px var(--violet-soft); }
+  .banner { font-size: 13px; padding: 10px 12px; border-radius: 9px; margin-bottom: 10px; border: 1px solid transparent; }
+  .banner.error { background: var(--crimson-soft); color: #ffb3b5; border-color: rgba(244,113,117,0.3); }
+  .banner.info { background: var(--teal-soft); color: var(--teal); border-color: rgba(53,214,190,0.3); }
   .center-row {
     display: flex; align-items: center; justify-content: center;
     padding: 40px 0; color: var(--muted); font-size: 13.5px; gap: 8px;
   }
-  .empty { text-align: center; padding: 50px 20px; }
-  .empty .h { font-size: 15px; color: #3a4444; margin-bottom: 4px; }
-  .empty .s { font-size: 13px; color: #8a9595; }
+  .empty { text-align: center; padding: 54px 20px; }
+  .empty .h { font-size: 15.5px; color: var(--ink); font-weight: 600; margin-bottom: 4px; }
+  .empty .s { font-size: 13px; color: var(--muted); }
   .list { display: flex; flex-direction: column; gap: 10px; }
   .card {
-    background: var(--card); border-radius: 12px; padding: 12px 14px;
-    box-shadow: 0 1px 2px rgba(15,76,76,0.08); border: 1px solid #e4eae8;
+    background: var(--surface); border-radius: 14px; padding: 13px 15px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.25); border: 1px solid var(--border);
   }
   .card-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-  .case-id { font-size: 15px; font-weight: 600; color: var(--ink); letter-spacing: -0.1px; word-break: break-word; }
+  .case-id { font-size: 15.5px; font-weight: 700; color: var(--ink); letter-spacing: -0.1px; word-break: break-word; }
   .initials {
-    font-size: 11px; font-weight: 700; color: var(--teal);
-    background: var(--teal-light); border-radius: 5px; padding: 2px 6px; flex-shrink: 0;
+    font-size: 11px; font-weight: 700; color: var(--violet);
+    background: var(--violet-soft); border-radius: 6px; padding: 3px 7px; flex-shrink: 0;
   }
-  .meta-row { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
-  .field-block { margin-top: 8px; }
-  .field-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.4px; color: #9aa9a8; font-weight: 600; }
-  .field-text { font-size: 13.5px; color: #374242; margin-top: 2px; line-height: 1.45; white-space: pre-wrap; }
-  .tag-row { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  .meta-row { font-size: 12.5px; color: var(--muted); margin-top: 3px; }
+  .field-block { margin-top: 9px; }
+  .field-label { font-size: 10.5px; letter-spacing: 0.3px; color: var(--muted); font-weight: 700; }
+  .field-text { font-size: 13.5px; color: var(--ink-dim); margin-top: 2px; line-height: 1.5; white-space: pre-wrap; }
+  .tag-row { display: flex; gap: 6px; margin-top: 9px; flex-wrap: wrap; }
   .tag {
-    font-size: 11px; font-weight: 600; border-radius: 5px; padding: 3px 7px;
+    font-size: 11px; font-weight: 700; border-radius: 6px; padding: 4px 8px;
+    border: 1px solid transparent;
   }
-  .tag.done { background: var(--done-bg); color: var(--done-ink); }
-  .tag.notdone { background: var(--notdone-bg); color: var(--notdone-ink); }
-  .timestamp { font-size: 11px; color: #a8b4b3; margin-top: 8px; }
-  .card-actions { display: flex; gap: 8px; margin-top: 10px; }
+  .tag.done { background: var(--teal-soft); color: var(--teal); border-color: rgba(53,214,190,0.25); }
+  .tag.notdone { background: rgba(255,255,255,0.05); color: var(--muted); border-color: var(--border); }
+  .timestamp { font-size: 11px; color: var(--muted); margin-top: 9px; }
+  .card-actions { display: flex; gap: 8px; margin-top: 11px; }
   .chip-btn {
-    font-size: 12px; font-weight: 600; border-radius: 7px; padding: 6px 12px;
-    border: 1px solid var(--line); background: #fff; color: var(--teal); cursor: pointer;
+    font-size: 12px; font-weight: 700; border-radius: 8px; padding: 7px 13px;
+    border: 1px solid var(--border); background: var(--surface-2); color: var(--violet); cursor: pointer;
   }
-  .chip-btn.danger { color: var(--danger-ink); border-color: #f0d3d0; }
-  .card.clickable { cursor: pointer; }
-  .card.clickable:active { background: #fbfcfc; }
-  .snippet { font-size: 13px; color: #5b6b6b; margin-top: 6px; line-height: 1.4;
+  .chip-btn.danger { color: var(--crimson); border-color: rgba(244,113,117,0.3); }
+  .card.clickable { cursor: pointer; transition: border-color .15s ease; }
+  .card.clickable:active { border-color: var(--violet); }
+  .snippet { font-size: 13px; color: var(--muted); margin-top: 7px; line-height: 1.45;
     overflow: hidden; text-overflow: ellipsis; display: -webkit-box;
     -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
   .detail-body { display: flex; flex-direction: column; gap: 2px; }
-  .attach-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+  .attach-list { display: flex; flex-direction: column; gap: 6px; margin-top: 9px; }
   .attach-chip {
     display: flex; align-items: center; justify-content: space-between; gap: 8px;
-    font-size: 12.5px; background: #f6f8f7; border: 1px solid #e4eae8;
-    border-radius: 7px; padding: 6px 8px;
+    font-size: 12.5px; background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 7px 9px;
   }
   .attach-chip a {
-    color: var(--teal); font-weight: 600; text-decoration: none;
+    color: var(--amber); font-weight: 700; text-decoration: none;
     display: flex; align-items: center; gap: 6px; min-width: 0;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   .attach-chip a svg { flex-shrink: 0; }
   .attach-remove {
-    background: none; border: none; color: var(--danger-ink); cursor: pointer;
-    font-size: 15px; line-height: 1; flex-shrink: 0; padding: 2px 4px;
+    background: none; border: none; color: var(--crimson); cursor: pointer;
+    font-size: 16px; line-height: 1; flex-shrink: 0; padding: 2px 4px;
   }
 
   .fab {
-    position: fixed; bottom: 20px; right: 18px; width: 54px; height: 54px;
-    border-radius: 27px; background: var(--teal); border: none;
+    position: fixed; bottom: 20px; right: 18px; width: 56px; height: 56px;
+    border-radius: 28px; background: linear-gradient(135deg, var(--magenta), var(--violet));
+    border: none;
     display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 4px 14px rgba(15,76,76,0.35); cursor: pointer;
+    box-shadow: 0 6px 20px rgba(168,145,247,0.4), 0 2px 8px rgba(242,105,158,0.3); cursor: pointer;
   }
   .overlay {
-    position: fixed; inset: 0; background: rgba(15,30,29,0.4);
+    position: fixed; inset: 0; background: rgba(5,6,10,0.6);
     display: flex; align-items: flex-end; z-index: 10;
   }
   .overlay.hidden { display: none; }
   .sheet {
-    background: #fff; width: 100%; border-radius: 16px 16px 0 0;
-    padding: 16px 16px 28px; max-height: 88vh; overflow-y: auto;
-    margin: 0 auto; max-width: 640px;
+    background: var(--bg-2); width: 100%; border-radius: 18px 18px 0 0;
+    padding: 18px 16px 28px; max-height: 88vh; overflow-y: auto;
+    margin: 0 auto; max-width: 640px; border-top: 1px solid var(--border);
   }
-  .sheet-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-  .sheet-title { font-size: 16px; font-weight: 600; color: var(--ink); }
-  form { display: flex; flex-direction: column; gap: 12px; }
-  label { display: flex; flex-direction: column; font-size: 12.5px; color: #4a5555; font-weight: 600; gap: 5px; }
+  .sheet-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .sheet-title { font-family: "Fraunces", Georgia, serif; font-style: italic; font-size: 17px; font-weight: 600; color: var(--ink); }
+  form { display: flex; flex-direction: column; gap: 13px; }
+  label { display: flex; flex-direction: column; font-size: 12.5px; color: var(--ink-dim); font-weight: 700; gap: 6px; }
   input, textarea, select {
-    font: inherit; font-size: 15px; padding: 10px 10px; border-radius: 8px;
-    border: 1px solid var(--line); color: #22302f; font-weight: 400; width: 100%;
+    font: inherit; font-size: 15px; padding: 10px 11px; border-radius: 9px;
+    border: 1px solid var(--border); background: var(--surface); color: var(--ink); font-weight: 400; width: 100%;
   }
+  input::placeholder, textarea::placeholder { color: var(--muted); }
+  select { color-scheme: dark; }
   textarea { min-height: 56px; resize: vertical; }
   input:focus, textarea:focus, select:focus, button:focus-visible {
-    outline: 2px solid var(--teal); outline-offset: 1px;
+    outline: none; border-color: var(--violet); box-shadow: 0 0 0 3px var(--violet-soft);
   }
   .section-heading {
-    border-top: 1px solid var(--line); margin: 2px 0 4px; padding-top: 12px;
-    font-size: 12.5px; font-weight: 700; color: var(--teal);
-    text-transform: uppercase; letter-spacing: 0.4px;
+    border-top: 1px solid var(--border); margin: 4px 0 4px; padding-top: 14px;
+    font-size: 12px; font-weight: 800; color: var(--magenta);
+    letter-spacing: 0.3px;
   }
   .findings-wrap { display: none; }
   .findings-wrap.show { display: flex; }
   .save-btn {
-    margin-top: 6px; background: var(--teal); color: #fff; border: none;
-    border-radius: 9px; padding: 13px; font-size: 15px; font-weight: 600; cursor: pointer;
+    margin-top: 8px; background: linear-gradient(135deg, var(--magenta), var(--violet)); color: #fff; border: none;
+    border-radius: 10px; padding: 14px; font-size: 15px; font-weight: 700; cursor: pointer;
+    box-shadow: 0 4px 14px rgba(168,145,247,0.3);
   }
-  .save-btn:disabled { opacity: 0.6; }
+  .save-btn:disabled { opacity: 0.55; box-shadow: none; }
 </style>
 </head>
 <body>
@@ -163,7 +199,9 @@
 <header>
   <div class="header-row">
     <div class="brand">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18h8"/><path d="M3 22h18"/><path d="M14 22a7 7 0 1 0 0-14h-1"/><path d="M9 14h2"/><path d="M9.17 4.17A7 7 0 0 0 6 10.09V14"/><path d="M9 4h4"/><path d="M11 2v6"/></svg>
+      <div class="brand-mark">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18h8"/><path d="M3 22h18"/><path d="M14 22a7 7 0 1 0 0-14h-1"/><path d="M9 14h2"/><path d="M9.17 4.17A7 7 0 0 0 6 10.09V14"/><path d="M9 4h4"/><path d="M11 2v6"/></svg>
+      </div>
       <div>
         <div class="title">Hemepath Case Log</div>
         <div class="subtitle">Shared &middot; all faculty see the same list</div>
@@ -196,8 +234,8 @@
   <div class="sheet" onclick="event.stopPropagation()">
     <div class="sheet-header">
       <span class="sheet-title" id="sheet-title">New case</span>
-      <button class="icon-btn" style="background:#eef2f1;" onclick="closeForm()" aria-label="Close">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5b6b6b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      <button class="icon-btn icon-btn-subtle" onclick="closeForm()" aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
     <form id="case-form">
@@ -264,8 +302,8 @@
   <div class="sheet" onclick="event.stopPropagation()">
     <div class="sheet-header">
       <span class="sheet-title">Case detail</span>
-      <button class="icon-btn" style="background:#eef2f1;" onclick="closeDetail()" aria-label="Close">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5b6b6b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      <button class="icon-btn icon-btn-subtle" onclick="closeDetail()" aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
     <div class="detail-body" id="detail-body"></div>
